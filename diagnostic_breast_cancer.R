@@ -91,42 +91,47 @@ hc <- hclust(d, method = "ward.D2")
 plot(hc)
 barplot(sort(hc$height, decreasing = TRUE)[1:40])
 # Looking at the barplot jumps, we conclude that 2 groups 
-nc = 2
+nc = 3
 c1 <- cutree(hc,nc)
 # centroids of the clusters
 cdg <- aggregate(as.data.frame(dbc.pca.ind.train), list(c1),mean)
 # Summary of the number of individuals assigned to a cluster
-k2 <- kmeans(dbc.pca.ind.train, centers = cdg[,2:(nd+1)], iter.max = 100)
-k2.cluster <- k2$cluster
-table(k2.cluster)
+k3 <- kmeans(dbc.pca.ind.train, centers = cdg[,2:(nd+1)], iter.max = 100)
+k3.cluster <- k3$cluster
+table(k3.cluster)
 # Interpret and name the obtained clusters and represent them
 # in the first factorial display
 par(mfrow = c(1,1))
 plot(dbc.pca.ind.train,type = "n", main = "Clustered Individuals")
-text(dbc.pca.ind.train,labels=rownames(dbc.pca.ind.train),col=k2.cluster)
-catdes(cbind(as.factor(k2.cluster),dbc.train),num.var = 1)
+text(dbc.pca.ind.train,labels=rownames(dbc.pca.ind.train),col=k3.cluster)
+catdes(cbind(as.factor(k3.cluster),dbc.train),num.var = 1)
 # Assing test data to the corresponding cluster 
 dbc.pca.test <- dbc.pca$ind.sup$coord
-k2.centers <- k2$centers
-k2.centers[1,]
+k3.centers <- k3$centers
+k3.centers[1,]
 dbc.pca.test[1,]
 dim(dbc.pca.test)
 test.centers <- 1:190
 dbc.pca.test <- as.matrix(dbc.pca.test)
 
 for (i in 1:dim(dbc.pca.test)[1]) {
-  # print(dist(rbind(dbc.pca.test[i,],k2.centers[1,])))
-  # print(dist(rbind(dbc.pca.test[i,],k2.centers[2,])))
-    if ( dist(rbind(dbc.pca.test[i,],k2.centers[1,])) >= dist(rbind(dbc.pca.test[i,], k2.centers[2,]))) {
+    dist1 <- dist(rbind(dbc.pca.test[i,],k3.centers[1,]))
+    dist2 <- dist(rbind(dbc.pca.test[i,],k3.centers[2,]))
+    dist3 <- dist(rbind(dbc.pca.test[i,],k3.centers[3,]))
+    min.dist <- min(dist1,dist2,dist3)
+    if (min.dist == dist1){
       test.centers[i] <- 'red'
     }
-    else {
+    else if (min.dist == dist2){
         test.centers[i] <- 'black'
+    }
+    else{
+      test.centers[i] <- 'green'
     }
 }
 table(test.centers)
 # Plot the test individuals with the train individuals
-plot(dbc.pca.ind.train, col = k2.cluster)
+plot(dbc.pca.ind.train, col = k3.cluster)
 points(dbc.pca.test, col = test.centers, pch = 4)
 
 # Trying to predit Diagnosis type
@@ -162,5 +167,51 @@ library(randomForest)
 rf1 <- randomForest(formula = Diagnosis ~., data = dbc.pca.ind, subset = 1:379, importance = TRUE, 
                     xtest = dbc.pca.ind[380:569,-6],ytest = dbc.pca.ind[380:569,6])
 print(rf1)
+real.colors <- dbc.pca.ind$Diagnosis[380:569]
+real.colors <- as.character(real.colors)
+real.colors[which(real.colors == 'M')]
+real.colors[which(real.colors == 'M')] <- 'red'
+real.colors[which(real.colors == 'B')] <- 'black'
+plot(dbc.pca.test, col = real.colors, main = 'Real classification for test individuals')
+plot(dbc.pca.test, col = rf1$test$predicted, main = 'RF classification for test individuals')
+
 # Random Forest works so well with this dataset
 
+# Checking if clustering of 2 groups is similar to classification
+nc = 3
+c1 <- cutree(hc,nc)
+# centroids of the clusters
+cdg <- aggregate(as.data.frame(dbc.pca.ind.train), list(c1),mean)
+# Summary of the number of individuals assigned to a cluster
+k2 <- kmeans(dbc.pca.ind.train, centers = cdg[,2:(nd+1)], iter.max = 100)
+k2.cluster <- k2$cluster
+table(k2.cluster)
+# Interpret and name the obtained clusters and represent them
+# in the first factorial display
+par(mfrow = c(1,1))
+plot(dbc.pca.ind.train,type = "n", main = "Clustered Individuals")
+text(dbc.pca.ind.train,labels=rownames(dbc.pca.ind.train),col=k2.cluster)
+catdes(cbind(as.factor(k2.cluster),dbc.train),num.var = 1)
+# Assing test data to the corresponding cluster 
+dbc.pca.test <- dbc.pca$ind.sup$coord
+k2.centers <- k2$centers
+k2.centers[1,]
+dbc.pca.test[1,]
+dim(dbc.pca.test)
+test.centers <- 1:190
+dbc.pca.test <- as.matrix(dbc.pca.test)
+
+for (i in 1:dim(dbc.pca.test)[1]) {
+  # print(dist(rbind(dbc.pca.test[i,],k2.centers[1,])))
+  # print(dist(rbind(dbc.pca.test[i,],k2.centers[2,])))
+  if ( dist(rbind(dbc.pca.test[i,],k3.centers[1,])) >= dist(rbind(dbc.pca.test[i,], k3.centers[2,]))) {
+    test.centers[i] <- 'red'
+  }
+  else {
+    test.centers[i] <- 'black'
+  }
+}
+table(test.centers)
+# Plot the test individuals with the train individuals
+plot(dbc.pca.ind.train, col = k2.cluster)
+points(dbc.pca.test, col = test.centers, pch = 4)
